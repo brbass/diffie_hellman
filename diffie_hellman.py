@@ -100,20 +100,18 @@ def calculate_shared_private_key(partner):
     shared_private_key = pow(shared_modified_key, private_key, public_key)
     save_key(shared_private_key, get_private_filename(partner))
 
-#################################################
-# Encryption and decryption using a Hill cipher #
-#################################################
-hill_mod = 256
-
+################################################################
+# Encryption and decryption using simple matrix multiplication #
+################################################################
 # Convert strings to lists of numbers and vice versa
 def string_to_numbers(string):
-    vals = [ord(s) for s in string]
+    vals = [ord(s) for s in string.decode()]
     return vals
 def numbers_to_string(number):
-    print r''.join(chr(n) for n in number)
-    return r''.join(chr(n) for n in number)
+    val = ''.join(chr(n).encode() for n in number).encode()
+    return val
 
-# Get matrix from key
+# Get encryption matrix from key
 def get_encryption_matrix(key):
     elements = [str(i) for i in str(key)]
     num_int = len(elements)
@@ -124,51 +122,47 @@ def get_encryption_matrix(key):
             matrix[i][j] = elements[i + rank * j]
     return matrix
 
+# Get decryption matrix from key
+def get_decryption_matrix(key):
+    return np.linalg.inv(get_encryption_matrix(key))
+
+# Encrypt a message
 def encrypt_message(partner, message):
     matrix = get_encryption_matrix(get_key(get_private_filename(partner)))
     rank = np.linalg.matrix_rank(matrix)
-    message_size = len(message)
-    num_blocks = int(np.ceil(len(message) / rank))
+    num_blocks = int(np.ceil(1.0 * len(message) / rank))
     padded_message = message
-    for i in range(rank - len(message) % rank):
-        padded_message += '_'
+    for i in range(len(message), rank * num_blocks):
+        padded_message += ' '
     encoded_message = string_to_numbers(padded_message)
-    encrypted_message = ''
+    encrypted_numbers = np.empty(rank * num_blocks, dtype=int)
     rhs = np.empty(rank, dtype=int)
     for b in range(num_blocks):
         for i in range(rank):
             rhs[i] = encoded_message[i + rank * b]
-        lhs = np.mod(np.dot(matrix, rhs), hill_mod)
-        encrypted_message += numbers_to_string(lhs)
-        print(numbers_to_string(lhs))
-    print(len(encrypted_message.encode()))
-    return encrypted_message
+        lhs = np.dot(matrix, rhs)
+        for i in range(rank):
+            encrypted_numbers[i + rank * b] = lhs[i]
+    return encrypted_numbers
 
-test_message = 'Hello my dear. How are you doing this evening? I miss you dearly. Please come visit soon.'
-# encrypt_message('erica', test_message)
+# Decrypt a message
 def decrypt_message(partner, message):
     key = get_key(get_private_filename(partner))
-    matrix = get_encryption_matrix(get_key(get_private_filename(partner)))
+    matrix = get_decryption_matrix(get_key(get_private_filename(partner)))
     rank = np.linalg.matrix_rank(matrix)
-    if message % rank is not 0:
+    if len(message) % rank != 0:
         print(len(message), rank)
         raise ValueError, "message is incorrect length"
-    num_blocks = message / rank
-    inv = np.linalg.inv(matrix)
-    det = np.linalg.det(matrix)
-    cof = inv.T * det
-    adj = cof.T
-    invmod = np.mod(np.multiply((1. / det) % hill_mod, adj), hill_mod)
-    encoded_message = string_to_numbers(message)
-    decoded_message = ''
+    num_blocks = len(message) / rank
+    decrypted_message = ''
     rhs = np.empty(rank, dtype=int)
     for b in range(num_blocks):
         for i in range(rank):
-            rhs[i] = encoded_message[i + rank * b]
-        lhs = np.mod(np.dot(invmod, rhs, hill_mod))
-        decoded_message += numbers_to_string(lhs)
-    print decoded_message
-decrypt_message('erica', encrypt_message('erica', test_message))
+            rhs[i] = message[i + rank * b]
+        lhs = np.round(np.dot(matrix, rhs))
+        lhs = [int(i) for i in lhs]
+        decrypted_message += numbers_to_string(lhs)
+    return decrypted_message
 
 #####################
 # Key related stuff #
@@ -230,10 +224,10 @@ if __name__ == '__main__':
     if args.encrypt_message is not None:
         if args.partner is None:
             raise IOError, 'must specify partner to encrypt message'
-        encrypt_message(args.partner, args.encrypt_message)
+        print(encrypt_message(args.partner, args.encrypt_message))
 
     # Decrypt a message from partner
     if args.decrypt_message is not None:
         if args.partner is None:
             raise IOError, 'must specify partner to decrypt message'
-        decrypt_message(args.partner, args.encrypt_message)
+        print(decrypt_message(args.partner, np.array(args.encrypt_message)))
