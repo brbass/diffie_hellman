@@ -2,18 +2,22 @@ import argparse, os, sympy, sys
 import numpy as np
 
 # Steps to run:
-# 1. Generate private and public keys
-#    python diffie-hellman.py -r -u
-# 2. Give public key to partner and have them set their public key to agree (or vice versa)
-#    python diffie-hellman.py -s 339124852213127435713
-# 3. Calculate modified public key
-#    python diffie-hellman.py -c
-# 4. Send this modified public key to partner and put in their modified public key
-#    python diffie-hellman.py -t 'erica' -m 896472694141726829263
-# 5. Encrypt a message and send it to partner
-#    python diffie-hellman.py -t 'erica' -e 'Very secret message.'
-# 6. Decrypt a message from partner
-#    python diffie-hellman.py -t 'erica' -e asdfkajweioisxcvjk23i
+# 1.  Generate public key (skip to use existing public key included in repo)
+#         python diffie-hellman.py -u
+# 2.  If generating a new public key, choose one of 2a or 2b
+# 2a. Give public key to all partners and have them set it
+# 2b. Set public key given by partner (will overwrite previous public key)
+#         python diffie-hellman.py -s 339124852213127435713
+# 3.  Generate private and modified keys 
+#         python diffie-hellman.py -u
+# 4.  Calculate modified public key
+#         python diffie-hellman.py -c
+# 5.  Send this modified public key to partner and put in their modified public key
+#         python diffie-hellman.py -t 'erica' -m 896472694141726829263
+# 6.  Encrypt a message and send it to partner
+#         python diffie-hellman.py -t 'erica' -e 'Very secret message.'
+# 7.  Decrypt a message from partner
+#         python diffie-hellman.py -t 'erica' -e asdfkajweioisxcvjk23i
 
 ###################################
 # Encryption using Diffie-Hellman #
