@@ -1,8 +1,9 @@
 import argparse, datetime, json, os, sympy, sys 
 import numpy as np
 
-# Steps to run:
-
+##################################
+# How to send encrypted messages #
+##################################
 # 1.  Generate public key (skip to use existing public key included in repo)
 #         python diffie-hellman.py -u
 # 2.  If generating a new public key, choose one of 2a or 2b
