@@ -207,7 +207,7 @@ def string_to_numbers(string):
     :param string: Message as string
     :return: Message as numbers
     """
-    vals = [ord(s) for s in string.decode()]
+    vals = [ord(s) for s in string]
     return vals
 def numbers_to_string(numbers):
     """
