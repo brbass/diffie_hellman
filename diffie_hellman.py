@@ -1,4 +1,4 @@
-import argparse, os, sympy, sys
+import argparse, datetime, json, os, sympy, sys 
 import numpy as np
 
 # Steps to run:
@@ -10,7 +10,7 @@ import numpy as np
 # 2b. Set public key given by partner (will overwrite previous public key)
 #         python diffie-hellman.py -s 339124852213127435713
 # 3.  Generate private and modified keys 
-#         python diffie-hellman.py -u -c 
+#         python diffie-hellman.py -r -c 
 # 4.  Send the modified public key to partner and put in their modified public key
 #         python diffie-hellman.py -t 'erica' -m 896472694141726829263
 # 5.  Encrypt a message and send it to partner
@@ -66,7 +66,7 @@ def get_key(filename):
         with open('keys/{}'.format(filename), 'r') as f:
             key = int(f.read())
     except:
-        raise IOError, filename + " not set"
+        raise IOError(filename + " not set")
     return key
 
 def generate_key(bounds, filename):
@@ -99,7 +99,8 @@ def check_keys(filenames):
     # Check for duplicate keys
     try:
         keys = [get_key(f) for f in filenames]
-    except:
+    except Exception as e:
+        print(e)
         return False
     if (len(keys) > len(set(keys))):
         print("WARNING: public and private keys are equal")
@@ -141,7 +142,7 @@ def calculate_shared_private_key(partner):
     """
     Calculate a shared private key
 
-    "param partner: Name of partner
+    :param partner: Name of partner
     """
     print('generating {}'.format(get_private_filename(partner)))
     private_key = get_key(private_filename)
@@ -153,6 +154,51 @@ def calculate_shared_private_key(partner):
 ################################################################
 # Encryption and decryption using simple matrix multiplication #
 ################################################################
+# Set filenames for messages
+message_folder = 'messages'
+
+def get_new_message_name(partner):
+    """
+    Get unique name for message
+
+    :param partner: Person receiving message
+    :return: Path of message
+    """
+    time = datetime.datetime.now()
+    name = "{}_{}-{}-{}-{}-{}-{}.json".format(partner,
+                                              time.year,
+                                              time.month,
+                                              time.day,
+                                              time.hour,
+                                              time.minute,
+                                              time.second)
+    return os.path.join(message_folder, name)
+
+def save_message(partner, message):
+    """
+    Save message to file
+
+    :param message: Any data structure to be saved
+    :param partner: Person receiving message
+    """
+    if not os.path.isdir(message_folder):
+        os.mkdir(message_folder)
+    name = get_new_message_name(partner)
+    with open(name, 'w') as f:
+        json.dump(message, f)
+    print("Saving message to {}".format(name))
+    return
+
+def load_message(filename):
+    """
+    Load message from file
+
+    :param filename: Filename to load data from
+    :return: Data that was stored
+    """
+    with open(filename, 'r') as f:
+        return json.load(f)
+
 def string_to_numbers(string):
     """
     Convert a string to a list of numbers
@@ -220,7 +266,7 @@ def encrypt_message(partner, message):
         lhs = np.dot(matrix, rhs)
         for i in range(rank):
             encrypted_numbers[i + rank * b] = lhs[i]
-    return encrypted_numbers
+    return list(encrypted_numbers)
 
 def decrypt_message(partner, message):
     """
@@ -230,18 +276,19 @@ def decrypt_message(partner, message):
     :param message: Message as numbers
     :return:  Message as string
     """
+    encrypted_numbers = np.array(message)
     key = get_key(get_private_filename(partner))
     matrix = get_decryption_matrix(get_key(get_private_filename(partner)))
     rank = np.linalg.matrix_rank(matrix)
-    if len(message) % rank != 0:
-        print(len(message), rank)
-        raise ValueError, "message is incorrect length"
-    num_blocks = len(message) / rank
+    if len(encrypted_numbers) % rank != 0:
+        print(len(encrypted_numbers), rank)
+        raise ValueError("message is incorrect length")
+    num_blocks = len(encrypted_numbers) / rank
     decrypted_message = ''
     rhs = np.empty(rank, dtype=int)
     for b in range(num_blocks):
         for i in range(rank):
-            rhs[i] = message[i + rank * b]
+            rhs[i] = encrypted_numbers[i + rank * b]
         lhs = np.round(np.dot(matrix, rhs))
         lhs = [int(i) for i in lhs]
         decrypted_message += numbers_to_string(lhs)
@@ -285,7 +332,6 @@ if __name__ == '__main__':
         
     # Check keys once they are generated and set
     if not check_keys([public_filename, private_filename]):
-        parser.print_help()
         quit()
     
     # Calculate modified key
@@ -301,18 +347,20 @@ if __name__ == '__main__':
     # Set modified key from partner
     if args.set_modified_key is not None:
         if args.partner is None:
-            raise IOError, 'must specify partner to set their modified key'
+            raise IOError('must specify partner to set their modified key')
         save_key(args.set_modified_key, get_modified_filename(args.partner))
         calculate_shared_private_key(args.partner)
 
     # Encrypt a message to partner
     if args.encrypt_message is not None:
         if args.partner is None:
-            raise IOError, 'must specify partner to encrypt message'
-        print(encrypt_message(args.partner, args.encrypt_message))
+            raise IOError('must specify partner to encrypt message')
+        message = encrypt_message(args.partner, args.encrypt_message)
+        save_message(args.partner, message)
 
     # Decrypt a message from partner
     if args.decrypt_message is not None:
         if args.partner is None:
-            raise IOError, 'must specify partner to decrypt message'
-        print(decrypt_message(args.partner, np.array(args.encrypt_message)))
+            raise IOError('must specify partner to decrypt message')
+        message = load_message(args.decrypt_message)
+        print(decrypt_message(args.partner, message))
