@@ -35,7 +35,8 @@ key_folder = 'keys'
 private_filename = 'private_key'
 public_filename = 'public_key'
 modified_filename = 'modified_key'
-    
+file_mode = False
+
 def get_prime(bounds):
     """
     Generate a random prime within the given bounds (inclusive)
@@ -166,13 +167,13 @@ def get_new_message_name(partner):
     :return: Path of message
     """
     time = datetime.datetime.now()
-    name = "{}_{}-{}-{}-{}-{}-{}.json".format(partner,
-                                              time.year,
-                                              time.month,
-                                              time.day,
-                                              time.hour,
-                                              time.minute,
-                                              time.second)
+    name = "{}_{}-{}-{}-{}-{}-{}".format(partner,
+                                         time.year,
+                                         time.month,
+                                         time.day,
+                                         time.hour,
+                                         time.minute,
+                                         time.second)
     return os.path.join(message_folder, name)
 
 def save_message(partner, message):
@@ -181,14 +182,17 @@ def save_message(partner, message):
 
     :param message: Any data structure to be saved
     :param partner: Person receiving message
+    :return: Filename
     """
     if not os.path.isdir(message_folder):
         os.mkdir(message_folder)
-    name = get_new_message_name(partner)
-    with open(name, 'w') as f:
-        json.dump(message, f)
-    print("Saving message to {}".format(name))
-    return
+    filename = get_new_message_name(partner)
+    np.savetxt(filename, message, newline=' ', fmt='%d')
+    # np.savez(filename, message)
+    # with open(name, 'w') as f:
+    #     json.dump(message, f)
+    print("saving message to {}".format(filename))
+    return filename
 
 def load_message(filename):
     """
@@ -197,8 +201,9 @@ def load_message(filename):
     :param filename: Filename to load data from
     :return: Data that was stored
     """
-    with open(filename, 'r') as f:
-        return json.load(f)
+    return np.loadtxt(filename)
+    # with open(filename, 'r') as f:
+    #     return json.load(f)
 
 def string_to_numbers(string):
     """
@@ -267,7 +272,7 @@ def encrypt_message(partner, message):
         lhs = np.dot(matrix, rhs)
         for i in range(rank):
             encrypted_numbers[i + rank * b] = lhs[i]
-    return list(encrypted_numbers)
+    return encrypted_numbers
 
 def decrypt_message(partner, message):
     """
@@ -314,8 +319,12 @@ if __name__ == '__main__':
                         help='set modified key from partner')
     parser.add_argument('-e', '--encrypt_message', type=str, nargs='?',
                         help='message that will be encrypted')
-    parser.add_argument('-d', '--decrypt_message', type=str, nargs='?',
-                        help='message that will be decrypted')
+    if file_mode:
+        parser.add_argument('-d', '--decrypt_message', type=str, nargs='?',
+                            help='message that will be decrypted')
+    else:
+        parser.add_argument('-d', '--decrypt_message', type=int, nargs='*',
+                            help='message that will be decrypted as a list of integers')
     args = parser.parse_args()
 
     # Generate and set keys
@@ -357,11 +366,22 @@ if __name__ == '__main__':
         if args.partner is None:
             raise IOError('must specify partner to encrypt message')
         message = encrypt_message(args.partner, args.encrypt_message)
-        save_message(args.partner, message)
-
+        if file_mode:
+            filename = save_message(args.partner, message)
+        else:
+            print('encrypted message:')
+            print(' '.join(str(m) for m in message))
+            
     # Decrypt a message from partner
     if args.decrypt_message is not None:
         if args.partner is None:
             raise IOError('must specify partner to decrypt message')
-        message = load_message(args.decrypt_message)
-        print(decrypt_message(args.partner, message))
+        if file_mode:
+            encrypted = load_message(args.decrypt_message)
+            decrypted = decrypt_message(args.partner, encrypted)
+        else:
+            decrypted = decrypt_message(args.partner, args.decrypt_message)
+        print('decrypted message:')
+        print(decrypted)
+        
+        
