@@ -221,7 +221,7 @@ def numbers_to_string(numbers):
     :param numbers: Message as numbers
     :return: Message as string
     """
-    val = ''.join(chr(n).encode() for n in numbers).encode()
+    val = ''.join(chr(n) for n in numbers)
     return val
 
 def get_encryption_matrix(key):
@@ -289,7 +289,7 @@ def decrypt_message(partner, message):
     if len(message) % rank != 0:
         print(len(message), rank)
         raise ValueError("message is incorrect length")
-    num_blocks = len(message) / rank
+    num_blocks = int(len(message) / rank)
     decrypted_message = ''
     rhs = np.empty(rank, dtype=int)
     for b in range(num_blocks):
