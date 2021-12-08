@@ -1,4 +1,4 @@
-import argparse, datetime, json, os, sympy
+import argparse, datetime, os, sympy
 import numpy as np
 
 ##################################
@@ -188,9 +188,6 @@ def save_message(partner, message):
         os.mkdir(message_folder)
     filename = get_new_message_name(partner)
     np.savetxt(filename, message, newline=' ', fmt='%d')
-    # np.savez(filename, message)
-    # with open(name, 'w') as f:
-    #     json.dump(message, f)
     print("saving message to {}".format(filename))
     return filename
 
@@ -202,8 +199,6 @@ def load_message(filename):
     :return: Data that was stored
     """
     return np.loadtxt(filename)
-    # with open(filename, 'r') as f:
-    #     return json.load(f)
 
 def string_to_numbers(string):
     """
