@@ -1,4 +1,4 @@
-import argparse, datetime, json, os, sympy, sys 
+import argparse, datetime, json, os, sympy
 import numpy as np
 
 ##################################
