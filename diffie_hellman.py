@@ -35,19 +35,33 @@ private_filename = 'private_key'
 public_filename = 'public_key'
 modified_filename = 'modified_key'
     
-# Generate a random prime within the given bounds (inclusive)
 def get_prime(bounds):
+    """
+    Generate a random prime within the given bounds (inclusive)
+    
+    :param bounds: Prime will be returned between these bounds
+    """
     return sympy.randprime(bounds[0]-1, bounds[1])
-
-# Save a key to file
 def save_key(key, filename):
+    """
+    Save a key to file
+    
+    :param key: Key that is being saved
+    :param filename: Location to store key to
+    """
     if not os.path.isdir(key_folder):
         os.mkdir(key_folder)
     with open(os.path.join(key_folder, filename), 'w') as f:
         f.write(str(key))
+    return
 
-# Return the key in the given file
 def get_key(filename):
+    """
+    Return the key in the given file
+    
+    :param filename: Location of key
+    :return: Key
+    """
     try:
         with open('keys/{}'.format(filename), 'r') as f:
             key = int(f.read())
@@ -55,21 +69,38 @@ def get_key(filename):
         raise IOError, filename + " not set"
     return key
 
-# Generate and save a key
 def generate_key(bounds, filename):
+    """
+    Generate and save a key
+
+    :param bounds: Key will be between these numeric bounds
+    :param filename: Location to store key to
+    """
     print("generating {}".format(filename))
     save_key(get_prime(bounds), filename)
     return
 
-# Print a key
 def print_key(filename):
+    """
+    Print a key to terminal
+    
+    :param filename: Location of key
+    """
     key = get_key(filename)
     print("{}:\n{}".format(filename, key))
     
-# Make sure our keys follow good practices
 def check_keys(filenames):
+    """
+    Make sure our keys follow good practices
+    
+    :param filenames: Key names to check
+    :return: Whether keys exist and pass checks
+    """
     # Check for duplicate keys
-    keys = [get_key(f) for f in filenames]
+    try:
+        keys = [get_key(f) for f in filenames]
+    except:
+        return False
     if (len(keys) > len(set(keys))):
         print("WARNING: public and private keys are equal")
         
@@ -77,25 +108,41 @@ def check_keys(filenames):
     for k, f in zip(keys, filenames):
         if not sympy.isprime(k):
             print("WARNING: {} is not prime".format(f))
+            
+    return True
 
-# Calculate a modified key to pass publicly
 def calculate_modified_key():
+    """Calculate a modified key to pass publicly"""
     print('generating {}'.format(modified_filename))
     private_key = get_key(private_filename)
     public_key = get_key(public_filename)
     modified_key = pow(public_base, private_key, public_key)
     save_key(modified_key, modified_filename)
 
-# Get filename for modified key from someone else
 def get_modified_filename(partner):
+    """
+    Get filename of modified key from someone else
+    
+    :param partner: Name of partner
+    :return:  Filename of modified key for partner
+    """
     return '{}_{}'.format(modified_filename, partner)
 
-# Get filename for private key for someone else
 def get_private_filename(partner):
+    """
+    Get filename of private key from someone else
+    
+    :param partner: Name of partner
+    :return:  Filename of private key for partner
+    """
     return '{}_{}'.format(private_filename, partner)
 
-# Calculate a shared private key
 def calculate_shared_private_key(partner):
+    """
+    Calculate a shared private key
+
+    "param partner: Name of partner
+    """
     print('generating {}'.format(get_private_filename(partner)))
     private_key = get_key(private_filename)
     public_key = get_key(public_filename)
@@ -106,16 +153,32 @@ def calculate_shared_private_key(partner):
 ################################################################
 # Encryption and decryption using simple matrix multiplication #
 ################################################################
-# Convert strings to lists of numbers and vice versa
 def string_to_numbers(string):
+    """
+    Convert a string to a list of numbers
+    
+    :param string: Message as string
+    :return: Message as numbers
+    """
     vals = [ord(s) for s in string.decode()]
     return vals
-def numbers_to_string(number):
-    val = ''.join(chr(n).encode() for n in number).encode()
+def numbers_to_string(numbers):
+    """
+    Convert a list of numbers to a string
+    
+    :param numbers: Message as numbers
+    :return: Message as string
+    """
+    val = ''.join(chr(n).encode() for n in numbers).encode()
     return val
 
-# Get encryption matrix from key
 def get_encryption_matrix(key):
+    """
+    Get encryption matrix from key
+    
+    :param key: Encryption key
+    :return: Encryption matrix
+    """
     elements = [str(i) for i in str(key)]
     num_int = len(elements)
     rank = int(np.floor(np.sqrt(num_int)))
@@ -125,12 +188,23 @@ def get_encryption_matrix(key):
             matrix[i][j] = elements[i + rank * j]
     return matrix
 
-# Get decryption matrix from key
 def get_decryption_matrix(key):
+    """
+    Get decryption matrix from key
+    
+    :param key: Encryption key
+    :return: Decryption matrix
+    """
     return np.linalg.inv(get_encryption_matrix(key))
 
-# Encrypt a message
 def encrypt_message(partner, message):
+    """
+    Encrypt a message
+    
+    :param parner: Name of partner
+    :param message: Message as string
+    :return: Message as numbers
+    """
     matrix = get_encryption_matrix(get_key(get_private_filename(partner)))
     rank = np.linalg.matrix_rank(matrix)
     num_blocks = int(np.ceil(1.0 * len(message) / rank))
@@ -148,8 +222,14 @@ def encrypt_message(partner, message):
             encrypted_numbers[i + rank * b] = lhs[i]
     return encrypted_numbers
 
-# Decrypt a message
 def decrypt_message(partner, message):
+    """
+    Decrypt a message
+    
+    :param partner: Name of partner
+    :param message: Message as numbers
+    :return:  Message as string
+    """
     key = get_key(get_private_filename(partner))
     matrix = get_decryption_matrix(get_key(get_private_filename(partner)))
     rank = np.linalg.matrix_rank(matrix)
@@ -167,9 +247,9 @@ def decrypt_message(partner, message):
         decrypted_message += numbers_to_string(lhs)
     return decrypted_message
 
-#####################
-# Key related stuff #
-#####################
+############################################
+# Run the program if this script is called #
+############################################
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-r', '--generate_private_key', action='store_true',
@@ -192,10 +272,6 @@ if __name__ == '__main__':
 
     # Generate and set keys
     generating = False
-    if args.generate_private_key:
-        generate_key(large_bounds, private_filename)
-        generating = True
-        
     if args.set_public_key is not None:
         save_key(args.set_public_key, public_filename)
         generating = True
@@ -203,8 +279,14 @@ if __name__ == '__main__':
         generate_key(large_bounds, public_filename)
         generating = True
         
+    if args.generate_private_key:
+        generate_key(large_bounds, private_filename)
+        generating = True
+        
     # Check keys once they are generated and set
-    check_keys([public_filename, private_filename])
+    if not check_keys([public_filename, private_filename]):
+        parser.print_help()
+        quit()
     
     # Calculate modified key
     if args.calculate_modified_key or generating:
