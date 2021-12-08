@@ -286,10 +286,10 @@ def decrypt_message(partner, message):
     key = get_key(get_private_filename(partner))
     matrix = get_decryption_matrix(get_key(get_private_filename(partner)))
     rank = np.linalg.matrix_rank(matrix)
-    if len(encrypted_numbers) % rank != 0:
-        print(len(encrypted_numbers), rank)
+    if len(message) % rank != 0:
+        print(len(message), rank)
         raise ValueError("message is incorrect length")
-    num_blocks = len(encrypted_numbers) / rank
+    num_blocks = len(message) / rank
     decrypted_message = ''
     rhs = np.empty(rank, dtype=int)
     for b in range(num_blocks):
